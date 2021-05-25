@@ -1,71 +1,6 @@
 /*
 * Inspiration: https://flow-view-source.com/testnet/account/0xba1132bc08f82fe2/contract/Ghost
-
-Fields:
-
- - collection: {CollectionKey: Capability} //will this work?
- - featuresNfts: {String:NFTPointer}
- - wallet: [Wallet] //this needs to be an array since it is ordered.
-
-Methods:
- - deposit(amount, type, message) : send flow to user, message paramter with a reason?
-  - deposit to the first wallet with the given type in the wallet array.
- - depositFlow(amount)
- - verify(message) ; Emit an events that verifies that this user has signed this transaction.
- - addNFTcollection
- - addMarketplaceCollection
- - addCollection(type, name, capability)
- - addWallet(name, balancerCap, receiverCap, [type])
- - getWallets()
- - setWallets([wallet]) //so that you can reorder
- - addFeatureNFT(string, capability, id)
- - removeWallet(name)
- - removeCollection(name)
- - removeFeaturedNFT(string)
- - methods to add/remove followers/following
-
-//Public methods
- - getNFTs()
- - getMarketplaces()
- - getProfile() //crete public profile struct
- - getName()
- - getAvatar()
- - getDescription()
- - getColor()
- - getTags()
- - find followers with some tags
- - find following with some tags
- - find all mututal followers/followings
-
-
-  pub struct Wallet {
-    pub let receiver: Capability<&{FungibleToken.Receiver}>
-    pub let balancer: Capability<&{FungibleTOken.Balancer}>
-    pub let accept: Type
-    pub let tags: [String]
-
- 
-   init(
-    receiver: Capability<&{FungibleToken.Receiver}>,
-    balancer: Capability<&{FungibleTOken.Balancer}>,
-    accept: Type,
-    tags: [String]
-  ) {
-    self.receiver=receiver,
-    self.balancer=balancer,
-    self.accept=accept,
-    self.tags=tags
-  }
- }
-
-NFTPointer:
- - collection: Capability<&NFT.PublicCollection>
- - type
- - index: UInt64
-
-***
-***
-**/
+*/
 
 import FungibleToken from "./standard/FungibleToken.cdc"
 
@@ -143,6 +78,7 @@ pub contract Profile {
     pub fun getWallets() : [Wallet]
     pub fun deposit(from: @FungibleToken.Vault)
     
+    //TODO: getProfile as a struct
     access(contract) fun internal_addFollower(_ address: Address, status: FriendStatus)
     access(contract) fun internal_removeFollower(_ address: Address) 
   }

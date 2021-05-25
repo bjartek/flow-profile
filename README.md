@@ -6,6 +6,6 @@ Look in the contracts/Profile.cdc file for information
 
 ## How to use
 
-Terminal 1 `flow emulator -v`
-Terminal 2 `flow project deploy && go run tasks/demo/main.go`
+ - Terminal 1 `flow emulator -v`
+ - Terminal 2 `flow project deploy && go run tasks/demo/main.go`
 
