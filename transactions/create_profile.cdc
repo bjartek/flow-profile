@@ -27,7 +27,7 @@ transaction(name: String, description: String, tags:[String]) {
     profile.addCollection(Profile.ResourceCollection( 
         name: "VersusArt", 
         collection:artCollectionCap, 
-        type: artCollection.getType(),
+        type: Type<&{Art.CollectionPublic}>(),
         tags: ["versus", "nft"]))
 
     let marketplaceCap = acct.getCapability<&{Marketplace.SalePublic}>(Marketplace.CollectionPublicPath)
@@ -41,7 +41,7 @@ transaction(name: String, description: String, tags:[String]) {
     profile.addCollection(Profile.ResourceCollection( 
         name: "VersusMarketplace", 
         collection:marketplaceCap, 
-        type: marketplaceCap.borrow()!.getType(),
+        type: Type<&{Marketplace.SalePublic}>(),
         tags: ["versus", "marketplace"]))
 
 

@@ -63,13 +63,11 @@ pub contract Profile {
   pub struct FriendStatus {
     pub let follower: Address
     pub let following:Address
-    pub let mutual: Bool
     pub let tags: [String]
 
-    init(follower: Address, following:Address, mutual: Bool, tags: [String]) {
+    init(follower: Address, following:Address, tags: [String]) {
       self.follower=follower
       self.following=following 
-      self.mutual=mutual
       self.tags= tags
     }
   }
@@ -87,7 +85,7 @@ pub contract Profile {
     pub fun deposit(from: @FungibleToken.Vault)
     
     //TODO: getProfile as a struct
-    access(contract) fun internal_addFollower(_ address: Address, status: FriendStatus)
+    access(contract) fun internal_addFollower(_ val: FriendStatus)
     access(contract) fun internal_removeFollower(_ address: Address) 
   }
   
@@ -183,11 +181,10 @@ pub contract Profile {
     pub fun follow(_ address: Address, tags:[String]) {
       let friendProfile=Profile.find(address)
       let owner=self.owner!.address
-      let mutual = friendProfile.follows(owner)
-      let status=FriendStatus(follower:owner, following:address, mutual:mutual, tags:tags)
+      let status=FriendStatus(follower:owner, following:address, tags:tags)
 
       self.following[address] = status
-      friendProfile.internal_addFollower(address, status: status)
+      friendProfile.internal_addFollower(status)
     }
     
     pub fun unfollow(_ address: Address) {
@@ -195,8 +192,8 @@ pub contract Profile {
       Profile.find(address).internal_removeFollower(self.owner!.address)
     }
     
-    access(contract) fun internal_addFollower(_ address: Address, status: FriendStatus) {
-      self.followers[address] = status
+    access(contract) fun internal_addFollower(_ val: FriendStatus) {
+      self.followers[val.following] = val
     }
     
     access(contract) fun internal_removeFollower(_ address: Address) {

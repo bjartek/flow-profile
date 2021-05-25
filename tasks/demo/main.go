@@ -73,5 +73,6 @@ func main() {
 		*/
 
 	g.ScriptFromFile("get_profile").AccountArgument("first").Run()
+	g.ScriptFromFile("get_profile").AccountArgument("second").Run()
 
 }
