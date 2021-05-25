@@ -64,10 +64,14 @@ func main() {
 		Run()
 
 	//This will fail since we do not have a FUSD wallet registered
+	/*
 	g.TransactionFromFile("transfer_fusd").
 		SignProposeAndPayAs("first").
 		UFix64Argument("10.0").
 		AccountArgument("second").
 		Run()
+		*/
+
+	g.ScriptFromFile("get_profile").AccountArgument("first").Run()
 
 }

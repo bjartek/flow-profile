@@ -13,30 +13,37 @@ pub contract Profile {
     self.privatePath = /storage/User
   }
 
- pub struct Wallet {
-   pub let name: String
-   pub let receiver: Capability<&{FungibleToken.Receiver}>
-   pub let balance: Capability<&{FungibleToken.Balance}>
-   pub let accept: Type
-   pub let tags: [String]
+  /* 
+  Represents a Fungible token wallet with a name and a supported type.
+   */
+  pub struct Wallet {
+    pub let name: String
+    pub let receiver: Capability<&{FungibleToken.Receiver}>
+    pub let balance: Capability<&{FungibleToken.Balance}>
+    pub let accept: Type
+    pub let tags: [String]
 
- 
-   init(
-    name: String,
-    receiver: Capability<&{FungibleToken.Receiver}>,
-    balance: Capability<&{FungibleToken.Balance}>,
-    accept: Type,
-    tags: [String]
-  ) {
-    self.name=name
-    self.receiver=receiver
-    self.balance=balance
-    self.accept=accept
-    self.tags=tags
+    init(
+      name: String,
+      receiver: Capability<&{FungibleToken.Receiver}>,
+      balance: Capability<&{FungibleToken.Balance}>,
+      accept: Type,
+      tags: [String]
+    ) {
+      self.name=name
+      self.receiver=receiver
+      self.balance=balance
+      self.accept=accept
+      self.tags=tags
+    }
   }
- }
 
- pub struct ResourceCollection {
+  /*
+  
+   Represent a collection of a Resource that you want to expose
+   Since NFT standard is not so great at just add Type and you have to use instanceOf to check for now
+   */
+  pub struct ResourceCollection {
     pub let collection: Capability
     pub let tags: [String]
     pub let type: Type
@@ -48,8 +55,11 @@ pub contract Profile {
       self.tags=tags
       self.type=type
     }
- }
-  //should this have a owner and friend Address?
+  }
+
+  /*
+    Information about a connection between one profile and another.
+   */
   pub struct FriendStatus {
     pub let follower: Address
     pub let following:Address
@@ -63,8 +73,6 @@ pub contract Profile {
       self.tags= tags
     }
   }
-  
- 
 
   pub resource interface Public {
     pub fun getName(): String
@@ -101,6 +109,7 @@ pub contract Profile {
     //TODO set wallet
   }
   
+
   pub resource Base: Public, Owner, FungibleToken.Receiver {
     access(self) var name: String
     access(self) var description: String
@@ -122,6 +131,7 @@ pub contract Profile {
       self.wallets=[]
     }
     
+    //TODO; Supported walletTypes?
     pub fun supportedTypes() : [Type] { 
         let types: [Type] =[]
         for w in self.wallets {
