@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 
 	"github.com/bjartek/go-with-the-flow/gwtf"
 	"github.com/onflow/cadence"
@@ -28,7 +27,6 @@ func main() {
 		Argument(tags).
 		RunPrintEventsFull()
 
-	fmt.Scanln()
 	g.TransactionFromFile("create_profile").
 		SignProposeAndPayAs("second").
 		StringArgument("Second").

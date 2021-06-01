@@ -14,9 +14,21 @@ transaction(name: String, description: String, tags:[String]) {
     let flowWallet= Profile.Wallet(name:"Flow", receiver: flowReceiver, balance: flowBalance, accept:flow.getType(), tags: ["flow"])
     profile.addWallet(flowWallet)
 
-    acct.save(<-FUSD.createEmptyVault(), to: /storage/fusdVault)
+    let fusd <- FUSD.createEmptyVault()
+    let fusdType=fusd.getType()
+    acct.save(<- fusd, to: /storage/fusdVault)
     acct.link<&FUSD.Vault{FungibleToken.Receiver}>( /public/fusdReceiver, target: /storage/fusdVault)
     acct.link<&FUSD.Vault{FungibleToken.Balance}>( /public/fusdBalance, target: /storage/fusdVault)
+
+    let fusdWallet=Profile.Wallet(
+        name:"FUSD", 
+        receiver:acct.getCapability<&{FungibleToken.Receiver}>(/public/fusdReceiver),
+        balance:acct.getCapability<&{FungibleToken.Balance}>(/public/fusdBalance),
+        accept: fusdType,
+        tags: ["fusd", "stablecoin"]
+    )
+
+    profile.addWallet(fusdWallet)
 
     acct.save<@NonFungibleToken.Collection>(<- Art.createEmptyCollection(), to: Art.CollectionStoragePath)
     acct.link<&{Art.CollectionPublic}>(Art.CollectionPublicPath, target: Art.CollectionStoragePath)
