@@ -13,6 +13,8 @@ pub contract Profile {
     self.privatePath = /storage/User
   }
 
+  //TODO: Add Events
+
   /* 
   Represents a Fungible token wallet with a name and a supported type.
    */
@@ -114,6 +116,7 @@ pub contract Profile {
   }
 
   pub struct UserProfile {
+    pub let address: Address
     pub let name: String
     pub let description: String
     pub let tags: [String]
@@ -134,6 +137,7 @@ pub contract Profile {
       collections: [CollectionProfile],
       following: [FriendStatus],
       followers: [FriendStatus]) {
+        self.address=Profile.account.address
         self.name=name
         self.description=description
         self.tags=tags
@@ -160,19 +164,24 @@ pub contract Profile {
     pub fun supportedFungigleTokenTypes() : [Type]
     pub fun asProfile() : UserProfile
     
-    //TODO: getProfile as a struct
     access(contract) fun internal_addFollower(_ val: FriendStatus)
     access(contract) fun internal_removeFollower(_ address: Address) 
   }
   
+  //TODO: Add more pre checks here
   pub resource interface Owner {
     pub fun setName(_ val: String) {
       pre {
         val.length <= 16: "Name must be 16 or less characters"
       }
     }
+
     pub fun setAvatar(_ val: String)
+    //should pobably validate that tags cannot be above a certain length
+
     pub fun setTags(_ val: [String])
+    
+    //validate length of description to be 255 or something?
     pub fun setDescription(_ val: String)
 
     pub fun follow(_ address: Address, tags:[String])

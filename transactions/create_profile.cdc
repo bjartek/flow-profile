@@ -46,9 +46,6 @@ transaction(name: String, description: String, tags:[String]) {
 
 
     profile.addLink(Profile.Link("Foo", "Image", "http://foo.bar"))
-    log(profile.getLinks())
-    profile.removeLink("Foo")
-    log(profile.getLinks())
     acct.save(<-profile, to: Profile.privatePath)
     acct.link<&Profile.User{Profile.Public}>(Profile.publicPath, target: Profile.privatePath)
   }
