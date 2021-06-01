@@ -5,7 +5,7 @@ import Profile, Art, NonFungibleToken, Marketplace, FUSD from 0xf8d6e0586b0a20c7
 transaction(name: String, description: String, tags:[String]) {
   prepare(acct: AuthAccount) {
 
-    let profile <-Profile.createProfile(name:name, description: description, tags:tags)
+    let profile <-Profile.createUser(name:name, description: description, tags:tags)
 
     let flowReceiver= acct.getCapability<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
     let flowBalance= acct.getCapability<&{FungibleToken.Balance}>(/public/flowTokenBalance)
@@ -38,14 +38,18 @@ transaction(name: String, description: String, tags:[String]) {
     let marketplace=acct.borrow<&Marketplace.SaleCollection>(from: Marketplace.CollectionStoragePath)!
     let art <- Art.createArtWithContent(name: "TestArt3", artist:"Tester", artistAddress:acct.address, description: "This is a test art", url: "Testing", type: "String", royalty:{})
     marketplace.listForSale(token: <- art, price: 10.0)
-    profile.addCollection(Profile.ResourceCollection( 
-        name: "VersusMarketplace", 
-        collection:marketplaceCap, 
-        type: Type<&{Marketplace.SalePublic}>(),
-        tags: ["versus", "marketplace"]))
+    profile.addCollection(Profile.ResourceCollection(
+        "VersusMarketplace", 
+        marketplaceCap, 
+        Type<&{Marketplace.SalePublic}>(),
+        ["versus", "marketplace"]))
 
 
+    profile.addLink(Profile.Link("Foo", "Image", "http://foo.bar"))
+    log(profile.getLinks())
+    profile.removeLink("Foo")
+    log(profile.getLinks())
     acct.save(<-profile, to: Profile.privatePath)
-    acct.link<&Profile.Base{Profile.Public}>(Profile.publicPath, target: Profile.privatePath)
+    acct.link<&Profile.User{Profile.Public}>(Profile.publicPath, target: Profile.privatePath)
   }
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/bjartek/go-with-the-flow/gwtf"
 	"github.com/onflow/cadence"
 )
@@ -26,6 +28,7 @@ func main() {
 		Argument(tags).
 		RunPrintEventsFull()
 
+	fmt.Scanln()
 	g.TransactionFromFile("create_profile").
 		SignProposeAndPayAs("second").
 		StringArgument("Second").
@@ -56,7 +59,6 @@ func main() {
 		AccountArgument("second").
 		Run()
 
-
 	g.TransactionFromFile("mint_fusd").
 		SignProposeAndPayAsService().
 		AccountArgument("first").
@@ -65,12 +67,12 @@ func main() {
 
 	//This will fail since we do not have a FUSD wallet registered
 	/*
-	g.TransactionFromFile("transfer_fusd").
-		SignProposeAndPayAs("first").
-		UFix64Argument("10.0").
-		AccountArgument("second").
-		Run()
-		*/
+		g.TransactionFromFile("transfer_fusd").
+			SignProposeAndPayAs("first").
+			UFix64Argument("10.0").
+			AccountArgument("second").
+			Run()
+	*/
 
 	g.ScriptFromFile("get_profile").AccountArgument("first").Run()
 	g.ScriptFromFile("get_profile").AccountArgument("second").Run()
