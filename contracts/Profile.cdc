@@ -6,14 +6,17 @@ import FungibleToken from "./standard/FungibleToken.cdc"
 
 pub contract Profile {
   pub let publicPath: PublicPath
-  pub let privatePath: StoragePath
+  pub let storagePath: StoragePath
   
-  init() {
-    self.publicPath = /public/User
-    self.privatePath = /storage/User
-  }
+  
+  //and event emitted when somebody follows another user
+  pub event Follow(follower:Address, following: Address, tags: [String])
 
-  //TODO: Add Events
+  //an event emitted when somebody unfollows somebody
+  pub event Unfollow(follower:Address, unfollowing: Address)
+
+  //and event emitted when a user verifies something
+  pub event Verification(account:Address, message:String)
 
   /* 
   Represents a Fungible token wallet with a name and a supported type.
@@ -126,8 +129,10 @@ pub contract Profile {
     pub let collections: [CollectionProfile]
     pub let following: [FriendStatus]
     pub let followers: [FriendStatus]
+    pub let allowStoringFollowers: Bool
 
     init(
+      address: Address,
       name: String,
       description: String, 
       tags: [String],
@@ -136,8 +141,9 @@ pub contract Profile {
       wallets: [WalletProfile],
       collections: [CollectionProfile],
       following: [FriendStatus],
-      followers: [FriendStatus]) {
-        self.address=Profile.account.address
+      followers: [FriendStatus],
+      allowStoringFollowers:Bool) {
+        self.address=address
         self.name=name
         self.description=description
         self.tags=tags
@@ -147,6 +153,7 @@ pub contract Profile {
         self.wallets=wallets
         self.following=following
         self.followers=followers
+        self.allowStoringFollowers=allowStoringFollowers
       }
   }
   pub resource interface Public {
@@ -168,7 +175,6 @@ pub contract Profile {
     access(contract) fun internal_removeFollower(_ address: Address) 
   }
   
-  //TODO: Add more pre checks here
   pub resource interface Owner {
     pub fun setName(_ val: String) {
       pre {
@@ -176,15 +182,30 @@ pub contract Profile {
       }
     }
 
-    pub fun setAvatar(_ val: String)
-    //should pobably validate that tags cannot be above a certain length
+    pub fun setAvatar(_ val: String){
+      pre {
+        val.length <= 255: "Avatar must be 255 characters or less"
+      }
+    }
 
-    pub fun setTags(_ val: [String])
-    
+    pub fun setTags(_ val: [String])  {
+       pre {
+        Profile.verifyTags(tags: val, tagLength:10, tagSize:3) : "cannot have more then 3 tags of length 10"
+      }
+    }   
+
     //validate length of description to be 255 or something?
-    pub fun setDescription(_ val: String)
+    pub fun setDescription(_ val: String) {
+      pre {
+        val.length <= 255: "Description must be 255 characters or less"
+      }
+    }
 
-    pub fun follow(_ address: Address, tags:[String])
+    pub fun follow(_ address: Address, tags:[String]) {
+       pre {
+        Profile.verifyTags(tags: tags, tagLength:10, tagSize:3) : "cannot have more then 3 tags of length 10"
+      }
+    }
     pub fun unfollow(_ address: Address)
 
     pub fun removeCollection(_ val: String)
@@ -196,6 +217,15 @@ pub contract Profile {
 
     pub fun addLink(_ val: Link)
     pub fun removeLink(_ val: String)
+
+    //Verify that this user has signed something.
+    pub fun verify(_ val:String) 
+
+    //A user must be able to remove a follower since this data in your account is added there by another user
+    pub fun removeFollower(_ val: Address)
+
+    //Set if user is allowed to store followers or now
+    pub fun setAllowStoringFollowers(_ val: Bool)
   }
   
 
@@ -209,8 +239,9 @@ pub contract Profile {
     access(self) var collections: {String: ResourceCollection}
     access(self) var wallets: [Wallet]
     access(self) var links: {String: Link}
+    access(self) var allowStoringFollowers: Bool
     
-    init(name:String, description: String, tags: [String]) {
+    init(name:String, description: String, allowStoringFollowers: Bool, tags: [String]) {
       self.name = name
       self.description=description
       self.tags=tags
@@ -220,6 +251,16 @@ pub contract Profile {
       self.collections={}
       self.wallets=[]
       self.links={}
+      self.allowStoringFollowers=allowStoringFollowers
+
+    }
+
+    pub fun setAllowStoringFollowers(_ val: Bool) {
+      self.allowStoringFollowers=val
+    }
+
+    pub fun verify(_ val:String) {
+        emit Verification(account: self.owner!.address, message:val)
     }
 
     pub fun asProfile() : UserProfile {
@@ -234,6 +275,7 @@ pub contract Profile {
        }
 
        return UserProfile(
+         address: self.owner!.address,
          name: self.getName(),
          description: self.getDescription(),
          tags: self.getTags(),
@@ -242,7 +284,8 @@ pub contract Profile {
          wallets: wallets, 
          collections: collections,
          following: self.getFollowing(),
-         followers: self.getFollowers()
+         followers: self.getFollowers(),
+         allowStoringFollowers: self.allowStoringFollowers
        )
     }
 
@@ -298,6 +341,10 @@ pub contract Profile {
 
     pub fun setWallets(_ val: [Wallet]) { self.wallets=val }
 
+    pub fun removeFollower(_ val: Address) {
+      self.followers.remove(key:val)
+    }
+
     pub fun follows(_ address: Address) : Bool {
       return self.following.containsKey(address)
     }
@@ -327,19 +374,25 @@ pub contract Profile {
 
       self.following[address] = status
       friendProfile.internal_addFollower(status)
+      emit Follow(follower:owner, following: address, tags:tags)
     }
     
     pub fun unfollow(_ address: Address) {
       self.following.remove(key: address)
       Profile.find(address).internal_removeFollower(self.owner!.address)
+      emit Unfollow(follower: self.owner!.address, unfollowing:address)
     }
     
     access(contract) fun internal_addFollower(_ val: FriendStatus) {
-      self.followers[val.following] = val
+      if self.allowStoringFollowers {
+        self.followers[val.following] = val
+      }
     }
     
     access(contract) fun internal_removeFollower(_ address: Address) {
-      self.followers.remove(key: address)
+      if self.followers.containsKey(address) {
+        self.followers.remove(key: address)
+      }
     }
     
   }
@@ -350,8 +403,29 @@ pub contract Profile {
         .borrow()!
     }
   
-  pub fun createUser(name: String, description:String, tags:[String]) : @Profile.User {
-    return <- create Profile.User(name: name, description: description, tags: tags)
+  pub fun createUser(name: String, description:String, allowStoringFollowers: Bool, tags:[String]) : @Profile.User {
+    pre {
+      Profile.verifyTags(tags: tags, tagLength:10, tagSize:3) : "cannot have more then 3 tags of length 10"
+    }
+    return <- create Profile.User(name: name, description: description, allowStoringFollowers: allowStoringFollowers, tags: tags)
   }
 
+  init() {
+    self.publicPath = /public/User
+    self.storagePath = /storage/User
+  }
+
+
+  pub fun verifyTags(tags : [String], tagLength: Int, tagSize: Int): Bool {
+    if tags.length > tagSize {
+      return false
+    }
+
+    for t in tags {
+      if t.length > tagLength {
+        return false
+      }
+    }
+    return true
+  }
 }

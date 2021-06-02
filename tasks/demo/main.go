@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"github.com/bjartek/go-with-the-flow/gwtf"
 	"github.com/onflow/cadence"
 )
@@ -25,6 +24,7 @@ func main() {
 		StringArgument("First").
 		StringArgument("I am teh first user").
 		Argument(tags).
+		BooleanArgument(true).
 		RunPrintEventsFull()
 
 	g.TransactionFromFile("create_profile").
@@ -32,6 +32,7 @@ func main() {
 		StringArgument("Second").
 		StringArgument("I am teh second user").
 		Argument(tags).
+		BooleanArgument(false).
 		RunPrintEventsFull()
 
 	g.TransactionFromFile("follow").
@@ -74,5 +75,7 @@ func main() {
 
 	g.ScriptFromFile("get_profile").AccountArgument("first").Run()
 	g.ScriptFromFile("get_profile").AccountArgument("second").Run()
+
+	g.TransactionFromFile("verification").SignProposeAndPayAs("first").StringArgument("testtest").RunPrintEventsFull()
 
 }

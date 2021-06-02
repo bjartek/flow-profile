@@ -2,10 +2,10 @@ import FungibleToken from 0xee82856bf20e2aa6
 import FlowToken from 0x0ae53cb6e3f42a79
 import Profile, Art, NonFungibleToken, Marketplace, FUSD from 0xf8d6e0586b0a20c7
 
-transaction(name: String, description: String, tags:[String]) {
+transaction(name: String, description: String, tags:[String], allowStoringFollowers: Bool) {
   prepare(acct: AuthAccount) {
 
-    let profile <-Profile.createUser(name:name, description: description, tags:tags)
+    let profile <-Profile.createUser(name:name, description: description, allowStoringFollowers:allowStoringFollowers, tags:tags)
 
     let flowReceiver= acct.getCapability<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
     let flowBalance= acct.getCapability<&{FungibleToken.Balance}>(/public/flowTokenBalance)
@@ -58,7 +58,7 @@ transaction(name: String, description: String, tags:[String]) {
 
 
     profile.addLink(Profile.Link("Foo", "Image", "http://foo.bar"))
-    acct.save(<-profile, to: Profile.privatePath)
-    acct.link<&Profile.User{Profile.Public}>(Profile.publicPath, target: Profile.privatePath)
+    acct.save(<-profile, to: Profile.storagePath)
+    acct.link<&Profile.User{Profile.Public}>(Profile.publicPath, target: Profile.storagePath)
   }
 }
