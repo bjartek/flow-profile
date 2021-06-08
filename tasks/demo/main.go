@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/bjartek/go-with-the-flow/gwtf"
 	"github.com/onflow/cadence"
 )
@@ -32,13 +34,13 @@ func main() {
 		StringArgument("Second").
 		StringArgument("I am teh second user").
 		Argument(tags).
-		BooleanArgument(false).
+		BooleanArgument(true).
 		RunPrintEventsFull()
 
-	g.TransactionFromFile("follow").
+
+	g.TransactionFromFile("ban").
 		SignProposeAndPayAs("first").
 		AccountArgument("second").
-		Argument(tags).
 		RunPrintEventsFull()
 
 	g.TransactionFromFile("follow").
@@ -46,6 +48,15 @@ func main() {
 		AccountArgument("first").
 		Argument(tags).
 		RunPrintEventsFull()
+
+	fmt.Scanln()
+	g.TransactionFromFile("follow").
+		SignProposeAndPayAs("first").
+		AccountArgument("second").
+		Argument(tags).
+		RunPrintEventsFull()
+
+	fmt.Scanln()
 
 	g.TransactionFromFile("mint_tokens").
 		SignProposeAndPayAsService().
