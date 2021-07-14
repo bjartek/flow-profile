@@ -247,7 +247,6 @@ pub contract Art: NonFungibleToken {
     } 
 
     //This method can only be called from another contract in the same account. In Versus case it is called from the VersusAdmin that is used to administer the solution
-    //NB! access(contract) is removed here for demo purposes
     pub fun createArtWithContent(
         name: String, 
         artist:String, 
@@ -281,7 +280,7 @@ pub contract Art: NonFungibleToken {
     }
 
     //This method can only be called from another contract in the same account. In Versus case it is called from the VersusAdmin that is used to administer the solution
-    access(account) fun createArtWithPointer(
+    pub fun createArtWithPointer(
         name: String, 
         artist: String, 
         artistAddress:Address, 
@@ -314,7 +313,7 @@ pub contract Art: NonFungibleToken {
     }
 
     //This method can only be called from another contract in the same account. In Versus case it is called from the VersusAdmin that is used to administer the solution
-    access(account) fun makeEdition(original: &NFT, edition: UInt64, maxEdition:UInt64) : @Art.NFT {
+    pub fun makeEdition(original: &NFT, edition: UInt64, maxEdition:UInt64) : @Art.NFT {
         var newNFT <- create NFT(
         initID: Art.totalSupply,
         metadata: Metadata(

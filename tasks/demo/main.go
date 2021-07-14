@@ -37,7 +37,6 @@ func main() {
 		BooleanArgument(true).
 		RunPrintEventsFull()
 
-
 	g.TransactionFromFile("ban").
 		SignProposeAndPayAs("first").
 		AccountArgument("second").
@@ -85,7 +84,9 @@ func main() {
 	*/
 
 	g.ScriptFromFile("get_profile").AccountArgument("first").Run()
+	g.ScriptFromFile("profile").AccountArgument("first").Run()
 	g.ScriptFromFile("get_profile").AccountArgument("second").Run()
+	g.ScriptFromFile("profile").AccountArgument("second").Run()
 
 	g.TransactionFromFile("verification").SignProposeAndPayAs("first").StringArgument("testtest").RunPrintEventsFull()
 

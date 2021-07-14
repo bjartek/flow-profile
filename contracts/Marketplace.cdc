@@ -7,37 +7,47 @@ import NonFungibleToken from "./standard/NonFungibleToken.cdc"
 
 pub contract Marketplace {
 
-    pub init() {
-        self.CollectionPublicPath= /public/versusArtMarketplace2
-        self.CollectionStoragePath= /storage/versusArtMarketplace2
-    }
-
     pub let CollectionStoragePath: StoragePath
     pub let CollectionPublicPath: PublicPath
 
     // Event that is emitted when a new NFT is put up for sale
-    pub event ForSale(id: UInt64, price: UFix64)
+    pub event ForSale(id: UInt64, price: UFix64, from: Address)
+
+    pub event SaleItem(id: UInt64, seller: Address, price: UFix64, active: Bool, title: String, artist: String, edition: UInt64, maxEdition: UInt64, cacheKey: String)
 
     // Event that is emitted when the price of an NFT changes
     pub event PriceChanged(id: UInt64, newPrice: UFix64)
     
     // Event that is emitted when a token is purchased
-    pub event TokenPurchased(id: UInt64, price: UFix64, from:Address, to:Address)
+    pub event TokenPurchased(id: UInt64, artId: UInt64, price: UFix64, from:Address, to:Address)
 
     pub event RoyaltyPaid(id:UInt64, amount: UFix64, to:Address, name:String)
 
     // Event that is emitted when a seller withdraws their NFT from the sale
-    pub event SaleWithdrawn(id: UInt64)
+    pub event SaleWithdrawn(id: UInt64, from:Address)
 
-
-    pub event RoyalityPaid()
     // Interface that users will publish for their Sale collection
     // that only exposes the methods that are supposed to be public
     //
     pub resource interface SalePublic {
         pub fun purchase(tokenID: UInt64, recipientCap: Capability<&{Art.CollectionPublic}>, buyTokens: @FungibleToken.Vault)
-        pub fun idPrice(tokenID: UInt64): UFix64?
+        pub fun getSaleItem(tokenID: UInt64): MarketplaceData
         pub fun getIDs(): [UInt64]
+        pub fun listSaleItems() : [MarketplaceData]
+        pub fun getContent(tokenID: UInt64) : String
+     }
+
+     pub struct MarketplaceData {
+        pub let id: UInt64
+        pub let art: Art.Metadata
+        pub let cacheKey: String
+        pub let price: UFix64
+        init( id: UInt64, art: Art.Metadata, cacheKey:String, price: UFix64) {
+            self.art= art
+            self.id=id
+            self.price=price
+            self.cacheKey=cacheKey
+        }
     }
 
     // SaleCollection
@@ -64,18 +74,60 @@ pub contract Marketplace {
             self.prices = {}
         }
 
-        // withdraw gives the owner the opportunity to remove a sale from the collection
+        pub fun getContent(tokenID: UInt64) : String {
+            return self.forSale[tokenID]?.content()!
+        }
+             
+        pub fun listSaleItems() : [MarketplaceData] {
+          var saleItems: [MarketplaceData] = []
+
+          for id in self.getIDs() {
+            saleItems.append(self.getSaleItem(tokenID: id))
+          }
+          return saleItems
+        }
+
+          pub fun borrowArt(id: UInt64): &{Art.Public}? {
+            if self.forSale[id] != nil {
+                return &self.forSale[id] as &Art.NFT
+            } else {
+                return nil
+            }
+        }
+
         pub fun withdraw(tokenID: UInt64): @Art.NFT {
-            // remove the price
-            self.prices.remove(key: tokenID)
+ 
+            let price=self.prices.remove(key: tokenID)
             // remove and return the token
             let token <- self.forSale.remove(key: tokenID) ?? panic("missing NFT")
-            emit SaleWithdrawn(id: tokenID)
+           
+            emit SaleWithdrawn(id: tokenID, from: self.ownerVault.address)
+
+            emit SaleItem(id: token.id, 
+              seller: self.ownerVault.address, 
+              price: price ?? 0.0, 
+              active: false,
+              title: token.metadata.name,
+              artist: token.metadata.artist,
+              edition: token.metadata.edition, 
+              maxEdition: token.metadata.maxEdition,
+              cacheKey: token.cacheKey())
+
             return <-token
         }
 
         // listForSale lists an NFT for sale in this collection
         pub fun listForSale(token: @Art.NFT, price: UFix64) {
+            emit SaleItem(id: token.id, 
+              seller: self.ownerVault.address, 
+              price: price, 
+              active: true,
+              title: token.metadata.name,
+              artist: token.metadata.artist,
+              edition: token.metadata.edition, 
+              maxEdition: token.metadata.maxEdition,
+              cacheKey: token.cacheKey())
+
             let id = token.id
 
             // store the price in the price array
@@ -85,14 +137,24 @@ pub contract Marketplace {
             let oldToken <- self.forSale[id] <- token
             destroy oldToken
 
-            emit ForSale(id: id, price: price)
+            emit ForSale(id: id, price: price, from: self.ownerVault.address)
         }
 
         // changePrice changes the price of a token that is currently for sale
         pub fun changePrice(tokenID: UInt64, newPrice: UFix64) {
             self.prices[tokenID] = newPrice
-
             emit PriceChanged(id: tokenID, newPrice: newPrice)
+
+            let token= self.borrowArt(id: tokenID)!
+            emit SaleItem(id: token.id, 
+              seller: self.ownerVault.address, 
+              price: newPrice, 
+              active: true,
+              title: token.metadata.name,
+              artist: token.metadata.artist,
+              edition: token.metadata.edition, 
+              maxEdition: token.metadata.maxEdition,
+              cacheKey: token.cacheKey())
         }
 
         // purchase lets a user send tokens to purchase an NFT that is for sale
@@ -115,17 +177,16 @@ pub contract Marketplace {
                 ?? panic("Could not borrow reference to owner token vault")
             
             let token <-self.withdraw(tokenID: tokenID)
+            let artId = token.id
 
             for royality in token.royalty.keys {
                 let royaltyData= token.royalty[royality]!
-                let amount= price * royaltyData.cut
-                let wallet= royaltyData.wallet.borrow()!
-
-                let royaltyWallet <- buyTokens.withdraw(amount: amount)
-
-                wallet.deposit(from: <- royaltyWallet)
-
-                emit RoyaltyPaid(id: tokenID, amount:amount, to: wallet.owner!.address, name:royality)
+                if let wallet= royaltyData.wallet.borrow() {
+                    let amount= price * royaltyData.cut
+                    let royaltyWallet <- buyTokens.withdraw(amount: amount)
+                    wallet.deposit(from: <- royaltyWallet)
+                    emit RoyaltyPaid(id: tokenID, amount:amount, to: royaltyData.wallet.address, name:royality)
+                } 
             }
             // deposit the purchasing tokens into the owners vault
             vaultRef.deposit(from: <-buyTokens)
@@ -133,12 +194,20 @@ pub contract Marketplace {
             // deposit the NFT into the buyers collection
             recipient.deposit(token: <- token)
 
-            emit TokenPurchased(id: tokenID, price: price, from: vaultRef.owner!.address, to:  recipient.owner!.address)
+            emit TokenPurchased(id: tokenID, artId: artId, price: price, from: vaultRef.owner!.address, to:  recipient.owner!.address)
         }
 
         // idPrice returns the price of a specific token in the sale
-        pub fun idPrice(tokenID: UInt64): UFix64? {
-            return self.prices[tokenID]
+        pub fun getSaleItem(tokenID: UInt64): MarketplaceData {
+
+            let metadata=self.forSale[tokenID]?.metadata
+            let cacheKey=self.forSale[tokenID]?.cacheKey()
+            return MarketplaceData(
+                id: tokenID,
+                art: metadata!,
+                cacheKey: cacheKey!,
+                price: self.prices[tokenID]!
+            )
         }
 
         // getIDs returns an array of token IDs that are for sale
@@ -155,5 +224,11 @@ pub contract Marketplace {
     pub fun createSaleCollection(ownerVault: Capability<&{FungibleToken.Receiver}>): @SaleCollection {
         return <- create SaleCollection(vault: ownerVault)
     }
+
+    pub init() {
+        self.CollectionPublicPath= /public/versusArtMarketplace
+        self.CollectionStoragePath= /storage/versusArtMarketplace
+    }
+
 }
  
